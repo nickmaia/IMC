@@ -1,70 +1,108 @@
-# Getting Started with Create React App
+-----> Backend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+    -Criar o ambiente virtual e ativar:
+````
+python -m venv env
+. env/scripts/activate
+````
+    -desativar: deactivate
+    
+    -Ignorar env no .gitignore
 
-## Available Scripts
+    -Instalar o Django:
+````
+pip install django
+pip install --upgrade pip           //Atualizar pip
+pip install djangorestframework
+````
 
-In the project directory, you can run:
+    -Criar projeto:
+````
+django-admin startproject backend .
+````
+    -Testar:
+````
+python manage.py runserver
+````
+    -Criar app:
+````
+python manage.py startapp imc //imc porque é o nome do nosso app criado no amb virtual.
+````
+    -Incluir na pasta backend no arquivo settings.py em INSTALLED_APPS 'rest_framework' e 'imc' 
+    
+    
+    -Criar modelo dentro da pasta imc em models.py e digitar um codigo, neste caso utilizei o seguinte:
+````
+from django.db import models
 
-### `npm start`
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+class Imc(models.Model):
+    peso_altura = models.TextField()
+    resultado = models.FloatField(default=0)
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+    def save(self, *args, **kwargs):
+        self.resultado = self.get_resultado
+        super(Imc, self).save(*args, **kwargs)
 
-### `npm test`
+    @property
+    def get_resultado(self):
+        peso, altura = list(map(float, self.peso_altura.split(',')))
+        return peso / altura**2
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+    class Meta:
 
-### `npm run build`
+        verbose_name = "Imc"
+        verbose_name_plural = "Imcs"
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+````
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+    -Criar o admin no arquivo admin.py em tasks:
+````
+            from django.contrib import admin
+            from .models import Imc
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+            # Register your models here.
+            admin.site.register(Imc)
+````
+    -Fazer as migrations e executar as mesmas, em seguida criar o superuser. Para isso, no terminal:
+````
+python manage.py makemigrations
+python manage.py migrate
+python manage.py createsuperuser
+````
+    -Cria um arquivo chamado serializers.py em imc e copia o codigo:
+````
+    from rest_framework import serializers
+    from .models import Imc
 
-### `npm run eject`
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+    class ImcSerializers(serializers.ModelSerializer):
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+        class Meta:
+            model = Imc
+            fields = ('id', 'peso_altura', 'resultado')
+            extra_kwargs = {
+                'resultado': {
+                    'read_only': True
+                },
+            }
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+````
+    -Em views.py na pasta icm, colocar o codigo:
+````
+      from rest_framework import generics
+      from .serializers import ImcSerializers
+      from .models import Imc
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
 
-## Learn More
+    class ListCreateImc(generics.ListCreateAPIView):
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+        queryset = Imc.objects.all()
+        serializer_class = ImcSerializers
 
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+````
+    -Adicionar o seguinte codigo em urls.py na pasta backend dentro de urlpatterns
+````
+     from imc.views import ListCreateImc
+     path('api/imc/', ListCreateImc.as_view()), 
+````
